@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
 		'person_detector_node = ia_turtlebot_vision.person_detector_node:main',
         'webcam_publisher_node = ia_turtlebot_vision.webcam_publisher_node:main',
+        'gesture_detector_node = ia_turtlebot_vision.gesture_detector_node:main',
         ],
     },
 )

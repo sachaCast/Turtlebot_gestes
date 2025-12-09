@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 import rclpy
@@ -10,8 +11,11 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 
-MODEL_PROTOTXT = '/home/laurine/Documents/M2 IA/SIA/PROJET/Turtlebot_gestes/ia_turtlebot_ws/models/MobileNetSSD_deploy.prototxt.txt'
-MODEL_WEIGHTS = '/home/laurine/Documents/M2 IA/SIA/PROJET/Turtlebot_gestes/ia_turtlebot_ws/models/MobileNetSSD_deploy.caffemodel'
+FILE_DIR = os.path.dirname(__file__)  
+MODELS_DIR = os.path.join(FILE_DIR, 'models')
+
+MODEL_PROTOTXT = os.path.join(MODELS_DIR, "MobileNetSSD_deploy.prototxt.txt")
+MODEL_WEIGHTS  = os.path.join(MODELS_DIR, "MobileNetSSD_deploy.caffemodel")
 
 CLASSES = [
 "background", "aeroplane", "bicycle", "bird", "boat",
