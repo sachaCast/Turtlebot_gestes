@@ -1,0 +1,14 @@
+install/
+build/
+log/
+.colcon_install_layout
+__pycache__/
+pycache/
+*.pyc
+*.pyo
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
