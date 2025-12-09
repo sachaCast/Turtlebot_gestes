@@ -33,7 +33,7 @@ class PersonDetectorNode(Node):
 
         self.image_sub = self.create_subscription(
             Image,
-            '/camera/image_raw',   # example but might change
+            '/camera/rgb/image_raw',  
             self.image_callback,
             10
         )
