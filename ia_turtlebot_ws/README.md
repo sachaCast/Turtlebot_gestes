@@ -56,13 +56,13 @@ Dans ce package, on a donc trois nodes: `webcam_publisher_node`, `person_detecto
 
 ### Modèles de vision
 
-- MobileNet SSD (MobileNetSSD_deploy.caffemodel + .prototxt) pour la détection de personnes.
+- MobileNet SSD (MobileNetSSD_deploy.caffemodel + .prototxt) pour la détection de personnes:
 
-Modèle léger, adapté au temps réel sur CPU et| largement utilisé dans des exemples pédagogiques.
+==> modèle léger, adapté au temps réel sur CPU.
 
-- MediaPipe Gesture Recognizer (gesture_recognizer.task) pour la reconnaissance de gestes de la main.
+- MediaPipe Gesture Recognizer (gesture_recognizer.task) pour la reconnaissance de gestes de la main:
 
-Pipeline complète (détection de main, landmarks, classification de gestes) qui simplifie fortement l’implémentation.
+==> pipeline complète (détection de main, landmarks, classification de gestes) qui simplifie fortement l’implémentation.
 
 Au début du projet, l’objectif était de combiner un modèle de détection de personnes avec le modèle de reconnaissance de gestes, car le système était pensé pour fonctionner avec une caméra 2D.​ Au fil du développement, le choix s’est finalement porté sur une caméra 3D, ce qui a conduit à remplacer cette approche par un modèle de segmentation de nuage de points pour détecter les personnes directement dans les données 3D.
 
