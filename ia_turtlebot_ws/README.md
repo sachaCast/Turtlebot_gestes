@@ -88,7 +88,7 @@ Les gestes choisis sont suffisamment distincts pour limiter les erreurs de class
 
 - ROS 2 Humble 
 
-- Workspace TurtleBot3 pour la simulation, par exemple :
+- Workspace TurtleBot3 pour la simulation
 
 #### Cloner le dépôt
 ```
