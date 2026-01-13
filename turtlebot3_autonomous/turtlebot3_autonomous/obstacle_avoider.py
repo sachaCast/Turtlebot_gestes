@@ -14,7 +14,7 @@ class ObstacleAvoider(Node):
 
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         self.subscription = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
-        self.command_subscription = self.create_subscription(String, '/gesture_cmd', self.command_callback, 10)
+        self.command_subscription = self.create_subscription(String, '/robot_operation_mode', self.command_callback, 10)
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
 
         # Paramètres de base
@@ -22,7 +22,6 @@ class ObstacleAvoider(Node):
         self.angular_speed_base = 0.5
         self.safe_distance = 0.2
 
-        # Variables d'état
         self.state = 'IDLE'
         self.action_timer = 0
         self.manual_cmd_vel = Twist()
@@ -65,7 +64,6 @@ class ObstacleAvoider(Node):
         command = msg.data.lower().strip()
         self.get_logger().info(f"Message reçu : {command}")
 
-        # STOP & RESET
         if command == "stop":
             self.state = 'IDLE'
             self.stop_robot()
@@ -84,7 +82,6 @@ class ObstacleAvoider(Node):
             self.get_logger().warn("Je suis occupé, commande ignorée.")
             return
 
-        # --- COMMANDES DE ROTATION ---
         if command == "left":
             angle_rad = math.radians(self.rotation_angle)
             self.target_yaw = self.normalize_angle(self.current_yaw + angle_rad)
@@ -99,7 +96,6 @@ class ObstacleAvoider(Node):
             self.get_logger().info(f"Rotation droite {self.rotation_angle}°")
             return
 
-        # --- COMMANDES DE DISTANCE (10cm) ---
         elif command == "forward":
             self.start_x = self.current_x
             self.start_y = self.current_y
@@ -111,18 +107,10 @@ class ObstacleAvoider(Node):
         elif command == "backward":
             self.start_x = self.current_x
             self.start_y = self.current_y
-            self.move_direction = -1      # Négatif
+            self.move_direction = -1
             self.state = 'MOVING_PRECISE'
             self.get_logger().info(f"Recule de {self.target_distance}cm...")
             return
-
-        #elif command == "demi_tour":
-        #    new_twist = Twist()
-        #    new_twist.angular.z = self.angular_speed_base
-        #    self.manual_cmd_vel = new_twist
-        #    self.action_timer = 40
-        #    self.state = 'MANUAL'
-
 
     def scan_callback(self, msg: LaserScan):
         cmd = Twist()
@@ -144,9 +132,7 @@ class ObstacleAvoider(Node):
             else:
                 kp = 1.5
                 angular_z = kp * error
-                # Clamp vitesse
                 angular_z = max(min(angular_z, 0.5), -0.5)
-                # Friction minimum
                 if 0 < angular_z < 0.1: angular_z = 0.1
                 if -0.1 < angular_z < 0: angular_z = -0.1
 
@@ -173,19 +159,15 @@ class ObstacleAvoider(Node):
                 self.state = 'LISTENING'
                 self.get_logger().info("Distance 10cm atteinte.")
             else:
-                # Vitesse proportionnelle (ralentit à la fin)
                 kp_dist = 2.0
                 speed = kp_dist * remaining
 
-                # Bornes vitesse (max 0.2, min 0.05 pour ne pas caler)
                 speed = max(min(speed, 0.2), 0.05)
 
-                # On applique le sens (avance ou recule)
                 cmd.linear.x = speed * self.move_direction
                 self.publisher.publish(cmd)
             return
 
-        # --- ETAT 3: MANUEL (TIMER) ---
         if self.state == 'MANUAL':
             self.publisher.publish(self.manual_cmd_vel)
             self.action_timer -= 1
@@ -194,7 +176,6 @@ class ObstacleAvoider(Node):
                 self.stop_robot()
             return
 
-        # --- ETAT 4: EXPLORATION ---
         if self.state == 'EXPLORE_FWD':
             if front_dist > self.safe_distance:
                 cmd.linear.x = self.linear_speed
