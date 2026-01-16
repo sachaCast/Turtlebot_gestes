@@ -27,7 +27,7 @@ def generate_launch_description():
     world = os.path.join(
         get_package_share_directory('turtlebot3_gazebo'),
         'worlds',
-        'turtlebot3_world.world'
+        '2nWorld.world'
     )
     set_env_vars_resources = AppendEnvironmentVariable(
             'GZ_SIM_RESOURCE_PATH',
