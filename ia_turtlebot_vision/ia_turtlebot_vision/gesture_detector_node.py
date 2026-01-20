@@ -15,6 +15,7 @@ from mediapipe.tasks.python import vision
 from mediapipe.python._framework_bindings import image as mp_image
 from mediapipe.python._framework_bindings import image_frame as mp_image_frame
 
+
 class GestureDetectorNode(Node):
     def __init__(self):
         super().__init__('gesture_detector_node')
@@ -27,11 +28,13 @@ class GestureDetectorNode(Node):
             10
         )
 
-        self.cmd_pub = self.create_publisher(
-            String,
-            '/gesture_cmd',
-            10
-        )
+        # Publish ONLY high-level gesture commands here
+        self.cmd_pub = self.create_publisher(String, '/gesture_cmd', 10)
+
+        # --- simple debounce ---
+        self.last_cmd = None
+        self.last_cmd_time = self.get_clock().now()
+        self.cmd_min_interval_s = 0.5  # do not re-publish same command too fast
 
         self.get_logger().info('Chargement du modèle de gestes MediaPipe...')
 
@@ -50,8 +53,6 @@ class GestureDetectorNode(Node):
         self.get_logger().info('GestureDetectorNode initialisé.')
 
     def image_callback(self, msg: Image) -> None:
-        self.get_logger().info('image_callback called')
-
         try:
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         except Exception as e:
@@ -59,18 +60,14 @@ class GestureDetectorNode(Node):
             return
 
         if frame is None:
-            self.get_logger().warn('Frame is None')
             return
 
         try:
             rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # creating MediaPipe image
             mp_img = mp_image.Image(
                 image_format=mp_image_frame.ImageFormat.SRGB,
                 data=rgb_image
             )
-
             result = self.recognizer.recognize(mp_img)
         except Exception as e:
             self.get_logger().error(f'Erreur MediaPipe recognize: {e}')
@@ -84,10 +81,20 @@ class GestureDetectorNode(Node):
         if cmd is None:
             return
 
+        # debounce identical command spam
+        now = self.get_clock().now()
+        dt = (now - self.last_cmd_time).nanoseconds / 1e9
+
+        if cmd == self.last_cmd and dt < self.cmd_min_interval_s:
+            return
+
+        self.last_cmd = cmd
+        self.last_cmd_time = now
+
         msg_cmd = String()
         msg_cmd.data = cmd
         self.cmd_pub.publish(msg_cmd)
-        self.get_logger().info(f'Geste détecté: {gesture_label} -> commande: {cmd}')
+        self.get_logger().info(f'Geste détecté: {gesture_label} -> /gesture_cmd: {cmd}')
 
     @staticmethod
     def extract_top_gesture(result):
@@ -103,13 +110,14 @@ class GestureDetectorNode(Node):
 
     @staticmethod
     def gesture_to_command(gesture_label: str) -> Optional[str]:
+        # IMPORTANT: Victory must be "victory" (supervisor decides to publish "listen")
         mapping = {
             'Thumb_Up': 'forward',
             'Thumb_Down': 'backward',
             'Open_Palm': 'stop',
             'Pointing_Up': 'right',
             'Closed_Fist': 'left',
-            'Victory': 'listen',
+            'Victory': 'victory',
         }
         return mapping.get(gesture_label, None)
 

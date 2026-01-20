@@ -1,138 +1,142 @@
-import os
-from typing import Optional
+#!/usr/bin/env python3
+import socket
+import struct
+import msgpack
+import numpy as np
+import cv2
 
 import rclpy
 from rclpy.node import Node
-
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
-
+from std_msgs.msg import Bool, Float32
 from cv_bridge import CvBridge
-import cv2
-import numpy as np
 
-FILE_DIR = os.path.dirname(__file__)  
-MODELS_DIR = os.path.join(FILE_DIR, 'models')
 
-MODEL_PROTOTXT = os.path.join(MODELS_DIR, "MobileNetSSD_deploy.prototxt.txt")
-MODEL_WEIGHTS  = os.path.join(MODELS_DIR, "MobileNetSSD_deploy.caffemodel")
+def send_msg(sock, obj):
+    body = msgpack.packb(obj, use_bin_type=True)
+    sock.sendall(struct.pack("!I", len(body)) + body)
 
-CLASSES = [
-"background", "aeroplane", "bicycle", "bird", "boat",
-"bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
-"dog", "horse", "motorbike", "person", "pottedplant",
-"sheep", "sofa", "train", "tvmonitor"
-]
 
-PERSON_CLASS_ID = CLASSES.index("person")
+def recvall(sock, n):
+    data = b""
+    while len(data) < n:
+        chunk = sock.recv(n - len(data))
+        if not chunk:
+            return None
+        data += chunk
+    return data
 
-class PersonDetectorNode(Node):
+
+def recv_msg(sock):
+    hdr = recvall(sock, 4)
+    if not hdr:
+        return None
+    (length,) = struct.unpack("!I", hdr)
+    body = recvall(sock, length)
+    if body is None:
+        return None
+    return msgpack.unpackb(body, raw=False)
+
+
+class PersonDetectorClient(Node):
     def __init__(self):
-        super().__init__('person_detector_node')
+        super().__init__("person_detector_node")
+
         self.bridge = CvBridge()
 
-        self.image_sub = self.create_subscription(
-            Image,
-            '/camera/rgb/image_raw',  
-            self.image_callback,
-            10
-        )
+        # Parameters
+        self.declare_parameter("image_topic", "/camera/rgb/image_raw")
+        self.declare_parameter("server_host", "10.111.229.90")  # VM IP
+        self.declare_parameter("server_port", 9900)
+        self.declare_parameter("send_every", 5)
+        self.declare_parameter("jpeg_quality", 75)
+        self.declare_parameter("socket_timeout", 4.0)
 
-        # data = [person_present, center_x_norm, center_y_norm, size_norm] (might also change)
-        self.person_pub = self.create_publisher(
-            Float32MultiArray,
-            '/person_detection',
-            10
-        )
+        # Detection thresholds
+        self.declare_parameter("min_area", 0.03)
 
-        self.get_logger().info('Chargement du modèle MobileNet SSD...')
-        self.net = cv2.dnn.readNetFromCaffe(MODEL_PROTOTXT, MODEL_WEIGHTS)
-        self.get_logger().info('Modèle MobileNet SSD chargé.')
-        self.get_logger().info('PersonDetectorNode initialisé')
+        self.image_topic = self.get_parameter("image_topic").value
+        self.server_host = self.get_parameter("server_host").value
+        self.server_port = int(self.get_parameter("server_port").value)
+        self.send_every = int(self.get_parameter("send_every").value)
+        self.jpeg_q = int(self.get_parameter("jpeg_quality").value)
+        self.sock_timeout = float(self.get_parameter("socket_timeout").value)
 
-    def image_callback(self, msg: Image) -> None:
-        # ROS -> OpenCV
-        try:
-            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        except Exception as e:
-            self.get_logger().error(f'Erreur cv_bridge: {e}')
+        self.min_area = float(self.get_parameter("min_area").value)
+
+        # Publishers
+        self.pub_human = self.create_publisher(Bool, "/human_detected", 10)
+        self.pub_cx = self.create_publisher(Float32, "/person_cx", 10)
+        self.pub_area = self.create_publisher(Float32, "/person_area", 10)
+
+        self.frame_count = 0
+        self.busy = False
+
+        self.sub = self.create_subscription(Image, self.image_topic, self.cb, 10)
+
+        self.get_logger().info(f"Subscribing: {self.image_topic}")
+        self.get_logger().info(f"DeepLab server: {self.server_host}:{self.server_port}")
+
+    def cb(self, msg: Image):
+        if self.busy:
             return
 
-        h, w = frame.shape[:2]
+        self.frame_count += 1
+        if self.frame_count % self.send_every != 0:
+            return
 
-        blob = cv2.dnn.blobFromImage(
-            cv2.resize(frame, (300, 300)),
-            0.007843,  
-            (300, 300),
-            127.5
-        )
-        self.net.setInput(blob)
-        detections = self.net.forward()
+        try:
+            bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except Exception as e:
+            self.get_logger().warn(f"cv_bridge error: {e}")
+            return
 
-        best_conf = 0.0
-        best_box = None
+        self.busy = True
+        try:
+            ok, jpg = cv2.imencode(".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_q])
+            if not ok:
+                return
 
-        for i in range(detections.shape[2]):
-            confidence = float(detections[0, 0, i, 2])
-            if confidence < 0.5:
-                continue
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(self.sock_timeout)
+            s.connect((self.server_host, self.server_port))
 
-            class_id = int(detections[0, 0, i, 1])
-            if class_id != PERSON_CLASS_ID:
-                continue
+            send_msg(s, {"img_jpg": jpg.tobytes()})
+            resp = recv_msg(s)
+            s.close()
 
-            box = detections[0, 0, i, 3:7]
-            x1 = int(box[0] * w)
-            y1 = int(box[1] * h)
-            x2 = int(box[2] * w)
-            y2 = int(box[3] * h)
+            if not resp or not resp.get("ok", False):
+                self.get_logger().warn(f"Bad server response: {resp}")
+                return
 
-            if confidence > best_conf:
-                best_conf = confidence
-                best_box = (x1, y1, x2, y2)
+            person = bool(resp.get("person", False))
+            cx = float(resp.get("cx", 0.5))
+            area = float(resp.get("area", 0.0))
 
-        if best_box is None:
-            person_present = 0.0
-            center_x_norm = 0.0
-            center_y_norm = 0.0
-            size_norm = 0.0
-        else:
-            x1, y1, x2, y2 = best_box
-            person_present = 1.0
-            cx = (x1 + x2) / 2.0
-            cy = (y1 + y2) / 2.0
-            center_x_norm = cx / w
-            center_y_norm = cy / h
-            box_area = max(0, x2 - x1) * max(0, y2 - y1)
-            size_norm = box_area / float(w * h)
+            # Apply area gate here to reduce false positives
+            human = person and (area >= self.min_area)
 
-        out_msg = Float32MultiArray()
-        out_msg.data = [person_present, center_x_norm, center_y_norm, size_norm]
-        self.person_pub.publish(out_msg)
+            self.pub_human.publish(Bool(data=human))
+            self.pub_cx.publish(Float32(data=cx))
+            self.pub_area.publish(Float32(data=area))
 
-        if best_box is not None:
-            x1, y1, x2, y2 = best_box
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(
-                frame,
-                f'person {best_conf:.2f}',
-                (x1, max(0, y1 - 5)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                1
-            )
+        except Exception as e:
+            self.get_logger().warn(f"Server call failed: {e}")
+            # Fail-safe: publish false if server unreachable
+            self.pub_human.publish(Bool(data=False))
+        finally:
+            self.busy = False
 
-        cv2.imshow('person_detector_debug', frame)
-        cv2.waitKey(1)
 
-def main(args: Optional[list] = None) -> None:
-    rclpy.init(args=args)
-    node = PersonDetectorNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
-    cv2.destroyAllWindows()
+def main():
+    rclpy.init()
+    node = PersonDetectorClient()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
-if __name__ == 'main':
+
+if __name__ == "__main__":
     main()

@@ -19,8 +19,8 @@ class ObstacleAvoider(Node):
 
         # Paramètres de base
         self.linear_speed = 0.2
-        self.angular_speed_base = 0.5
-        self.safe_distance = 0.2
+        self.angular_speed_base = 0.2
+        self.safe_distance = 0.4
 
         self.state = 'IDLE'
         self.action_timer = 0
@@ -101,7 +101,7 @@ class ObstacleAvoider(Node):
             self.start_y = self.current_y
             self.move_direction = 1
             self.state = 'MOVING_PRECISE'
-            self.get_logger().info(f"Avance de {self.target_distance}cm")
+            self.get_logger().info(f"Avance de {self.target_distance*100:.0f}cm")
             return
 
         elif command == "backward":
@@ -109,7 +109,7 @@ class ObstacleAvoider(Node):
             self.start_y = self.current_y
             self.move_direction = -1
             self.state = 'MOVING_PRECISE'
-            self.get_logger().info(f"Recule de {self.target_distance}cm...")
+            self.get_logger().info(f"Recule de {self.target_distance*100:.0f}cm...")
             return
 
     def scan_callback(self, msg: LaserScan):
