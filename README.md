@@ -189,19 +189,5 @@ Robot> Avance dans Gazebo
 
 User> Make Open Hand gesture ✋ + Press E
 Robot> S'arrête (image = Open Hand, mode = EXPLORING)
-```
-
----
-
-## 5. Guide des Commandes (via changer_images.py)
-
-| Touche | Image Affichée | Action du Robot |
-| --- | --- | --- |
-| **v** | Victory (✌️) | **Activation** : Passe en mode `LISTENING`. |
-| **z** | Thumb Up (👍) | **Avancer** : Le robot avance de 10cm. |
-| **s** | Thumb Down (👎) | **Reculer** : Le robot recule de 10cm. |
-| **q** | Closed Fist (✊) | **Gauche** : Rotation de 10°. |
-| **d** | Pointing Up (☝️) | **Droite** : Rotation de 10°. |
-| **e** | Open Palm (✋) | **Stop** : Arrêt et retour au mode `EXPLORING`. |
 
 ---
