@@ -68,13 +68,13 @@ chmod +x gesture_detector_node.py person_detector_node.py supervisor.py obstacle
 
 ## 4. Lancement et Utilisation
 
-### 📋 Ordre de Lancement (Important!)
+### Ordre de Lancement (Important!)
 
 Vous devez lancer les composants dans cet ordre exact pour que tout fonctionne correctement.
 
 ---
 
-### Étape 1️⃣ : Démarrer le Serveur Coral
+### Étape 1️ : Démarrer le Serveur Coral
 
 **Terminal 0 :**
 
@@ -87,7 +87,7 @@ python3 coral_server.py
 
 ---
 
-### Étape 2️⃣ : Lancer le Robot Supervisor + Gazebo
+### Étape 2️ : Lancer le Robot Supervisor + Gazebo
 
 **Terminal 1 :**
 
@@ -121,7 +121,7 @@ ros2 launch robot_supervisor robot_launch.py server_host:=127.0.0.1 server_port:
 
 ---
 
-### Étape 3️⃣ : Lancer le Contrôleur de Gestes
+### Étape 3️ : Lancer le Contrôleur de Gestes
 
 **Terminal 2 :**
 
@@ -144,16 +144,16 @@ python3 changer_images.py
 
 ---
 
-### Étape 4️⃣ : Activer le Robot avec le Geste Victory ✌️
+### Étape 4️ : Activer le Robot avec le Geste Victory 
 
-1. **Faites le geste Victory** (✌️) devant votre webcam
+1. **Faites le geste Victory** (✌️) 
 2. **Appuyez sur V**
 3. L'image affichée change en "Victory"
 4. **Le robot passe en mode LISTENING et commence à agir**
 
 ---
 
-### Étape 5️⃣ : Contrôlez le Robot
+### Étape 5️ : Contrôlez le Robot
 
 Une fois que le robot est activé (image = Victory), vous pouvez lui donner des commandes :
 
