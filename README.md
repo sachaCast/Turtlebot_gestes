@@ -34,7 +34,6 @@ sudo apt install ros-humble-ros-gz ros-humble-turtlebot3-gazebo \
 
 # Configuration du modèle spécifique avec caméra D435i
 echo "export PROJECT_MODEL=turtlebot3_burger_d435i" >> ~/.bashrc
-echo "export TURTLEBOT3_MODEL=burger" >> ~/.bashrc
 source ~/.bashrc
 
 ```
