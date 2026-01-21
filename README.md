@@ -1,4 +1,4 @@
-# Projet Turtlebot3 : IA, Vision et Contrôle par Gestes
+# Projet Turtlebot3 : Contrôle par Gestes
 
 Ce projet implémente un système de contrôle intelligent pour un **Turtlebot3 Burger** équipé d'une caméra de profondeur (**d435i**) dans l'environnement de simulation Gazebo. Il utilise **MediaPipe** pour la reconnaissance de gestes et un **Superviseur** pour orchestrer les comportements du robot.
 
