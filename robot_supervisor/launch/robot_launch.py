@@ -15,7 +15,7 @@ def generate_launch_description():
 
     # THIS is exactly what ros2 launch turtlebot3_gazebo projects_empty_world.launch.py uses
     gazebo_pkg_share = get_package_share_directory("turtlebot3_gazebo")
-    gazebo_launch = "/home/black/turtlebot3_ws/src/Turtlebot3_gestes/turtlebot3_gazebo/launch/projects/projects_empty_world.launch.py"
+    gazebo_launch = "../Turtlebot3_gestes/turtlebot3_gazebo/launch/projects/projects_empty_world.launch.py"
 
 
     return LaunchDescription([
@@ -73,3 +73,4 @@ def generate_launch_description():
             output="screen",
         ),
     ])
+
